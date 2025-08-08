@@ -1,0 +1,54 @@
+name: Build Android APK (SnakmodRU)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter version
+        run: flutter --version
+
+      # Создаём чистый проект под Android
+      - name: Create Flutter project
+        run: flutter create snakmodru --platforms=android --org com.snakmod --project-name snakmodru
+
+      # Подменяем главный файл на нашу игру
+      - name: Put game code
+        run: |
+          mkdir -p snakmodru/lib
+          cp -f lib/main.dart snakmodru/lib/main.dart
+
+      # Красивое имя приложения
+      - name: Set app label
+        run: sed -i 's/app_name">snakmodru/app_name">SnakmodRU/' snakmodru/android/app/src/main/res/values/strings.xml
+
+      # Добавляем зависимости (рекорды)
+      - name: Add dependencies
+        run: |
+          cd snakmodru
+          flutter pub add shared_preferences
+
+      - name: Pub get
+        run: cd snakmodru && flutter pub get
+
+      # Собираем APK (debug — ставится сразу)
+      - name: Build debug APK
+        run: cd snakmodru && flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnakmodRU-debug-apk
+          path: snakmodru/build/app/outputs/flutter-apk/app-debug.apk
